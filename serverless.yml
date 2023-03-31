@@ -17,7 +17,7 @@ provider:
   runtime: go1.x
   tracing:
     lambda: true
-    apiGateway: false # pending
+    apiGateway: true
   deploymentPrefix: serverless
   deploymentBucket:
     name: com.serverless.${self:provider.stage}.deployment
