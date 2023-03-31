@@ -1,0 +1,54 @@
+service: sls-apigw-lambda-dynamodb-go
+
+frameworkVersion: '3'
+
+configValidationMode: error
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  stage: dev
+  region: ap-northeast-1
+  profile: default
+  timeout: 10 # seconds
+  stackName: sls-apigw-lambda-dynamodb-go
+  runtime: go1.x
+  tracing:
+    lambda: true
+    apiGateway: false # pending
+  deploymentPrefix: serverless
+  deploymentBucket:
+    name: com.serverless.${self:provider.stage}.deployment
+    serverSideEncryption: AES256
+
+package:
+  individually: true
+  exclude:
+    - .git/**
+    - .gitignore
+    - .DS_Store
+    - .env
+    - .envrc
+    - .envrc.local
+    - .envrc.loca
+
+functions:
+  get_user:
+    handler: server/cmd/get_user.GetUserHandler
+    timeout: 10 # seconds
+    name: ${self:provider.stackName}-get_user
+    description: get user
+    events:
+      - http:
+          path: /user/{id}
+          method: get
+          cors: true
+          request:
+            uri: /user/{id}
+            parameters:
+              paths:
+                id: true
+              querystrings:
+                id: true
