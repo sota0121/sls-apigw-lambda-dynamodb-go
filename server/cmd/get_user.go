@@ -15,6 +15,7 @@ type GetUserRequest struct {
 type GetUserResponse struct {
 	UserId      string `json:"user_id"`
 	UserName    string `json:"user_name"`
+	Email       string `json:"email"`
 	CompanyName string `json:"company_name"`
 	Authority   string `json:"authority"`
 	GoogleId    string `json:"google_id"`
@@ -36,6 +37,7 @@ func GetUserHandler(ctx context.Context, req events.APIGatewayProxyRequest) (eve
 	respBody := GetUserResponse{
 		UserId:      "test_user_id",
 		UserName:    "test_user",
+		Email:       "test@sample.com",
 		CompanyName: "test_company",
 		Authority:   "admin",
 		GoogleId:    "test_google_id",

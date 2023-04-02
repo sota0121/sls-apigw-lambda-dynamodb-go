@@ -1,27 +1,86 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
 service: sls-apigw-lambda-dynamodb-go
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
 
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
 frameworkVersion: '3'
-
-configValidationMode: error
+useDotenv: true
 
 plugins:
   - serverless-offline
 
 provider:
   name: aws
+  runtime: go1.x
   stage: dev
-  region: ap-northeast-1
+  region: us-east-2
   profile: default
   timeout: 10 # seconds
   stackName: sls-apigw-lambda-dynamodb-go
-  runtime: go1.x
-  tracing:
-    lambda: true
-    apiGateway: true
-  deploymentPrefix: serverless
-  deploymentBucket:
-    name: com.serverless.${self:provider.stage}.deployment
-    serverSideEncryption: AES256
+  # tracing:
+  #   lambda: true
+  #   apiGateway: true
+  # deploymentPrefix: serverless
+  # deploymentBucket:
+  #   name: com-serverless-${self:provider.stage}-deployment
+  #   serverSideEncryption: AES256
+
+# you can add statements to the Lambda function's IAM Role here
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "s3:ListBucket"
+            - "s3:GetObject"
+            - "s3:PutObject"
+            - "s3:DeleteObject"
+          Resource:
+            Fn::Join:
+              - ""
+              - - "arn:aws:s3:::"
+                - "Ref" : "ServerlessDeploymentBucket"
+                - "/*"
+        - Effect: "Allow"
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:BatchWriteItem
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "arn:aws:logs:*:*:*"
+        - Effect: "Allow"
+          Action:
+            - lambda:InvokeFunction
+          Resource: "*"
+
+
+# you can define service wide environment variables here
+#  environment:
+#    variable1: value1
 
 package:
   individually: true
@@ -50,5 +109,100 @@ functions:
             parameters:
               paths:
                 id: true
-              querystrings:
-                id: true
+#    The following are a few example events you can configure
+#    NOTE: Please make sure to change your handler code to work with those events
+#    Check the event documentation for details
+# events:
+#    events:
+#      - httpApi:
+#          path: /users/create
+#          method: get
+#      - websocket: $connect
+#      - s3: ${env:BUCKET}
+#      - schedule: rate(10 minutes)
+#      - sns: greeter-topic
+#      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
+#      - alexaSkill: amzn1.ask.skill.xx-xx-xx-xx
+#      - alexaSmartHome: amzn1.ask.skill.xx-xx-xx-xx
+#      - iot:
+#          sql: "SELECT * FROM 'some_topic'"
+#      - cloudwatchEvent:
+#          event:
+#            source:
+#              - "aws.ec2"
+#            detail-type:
+#              - "EC2 Instance State-change Notification"
+#            detail:
+#              state:
+#                - pending
+#      - cloudwatchLog: '/aws/lambda/hello'
+#      - cognitoUserPool:
+#          pool: MyUserPool
+#          trigger: PreSignUp
+#      - alb:
+#          listenerArn: arn:aws:elasticloadbalancing:us-east-1:XXXXXX:listener/app/my-load-balancer/50dc6c495c0c9188/
+#          priority: 1
+#          conditions:
+#            host: example.com
+#            path: /hello
+
+#    Define function environment variables here
+#    environment:
+#      variable2: value2
+
+# you can add CloudFormation resource templates here
+#resources:
+#  Resources:
+#    NewResource:
+#      Type: AWS::S3::Bucket
+#      Properties:
+#        BucketName: my-new-bucket
+#  Outputs:
+#     NewOutput:
+#       Description: "Description for the output"
+#       Value: "Some output value"
+resources:
+  Resources:
+    # ArtifactBucket:
+    #   Type: AWS::S3::Bucket
+    #   Properties:
+    #     BucketName: ${self:provider.deploymentBucket.name}
+    #     LoggingConfiguration:
+
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.stage}-user
+        AttributeDefinitions:
+          - AttributeName: company_name
+            AttributeType: S
+          - AttributeName: google_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: company_name
+            KeyType: HASH
+          - AttributeName: google_id
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: company_name-google_id-index
+            KeySchema:
+              - AttributeName: company_name
+                KeyType: HASH
+              - AttributeName: google_id
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+
+  # extensions:
+  Outputs:
+    UserTableArn:
+      Description: UserTable Arn
+      Value: !GetAtt UserTable.Arn
+      Export:
+        Name: ${self:service}-${self:provider.stage}-UserTableArn
